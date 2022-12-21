@@ -3,7 +3,7 @@ import datetime
 import os.path
 from base64 import b64decode, b64encode
 from tempfile import NamedTemporaryFile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 from google.auth.transport.requests import Request
@@ -34,7 +34,8 @@ def get_token(credentials_filename: str):
 
 
 def next_n_events(n=100):
-    now = (datetime.utcnow() - timedelta(days=1)).isoformat()
+    ny_timezone = timezone(timedelta(hours=-5))
+    now = (datetime.now(ny_timezone) - timedelta(days=1)).isoformat()
     events_result = service.events().list(
         calendarId=CALENDAR_ID,
         timeMin=now,
@@ -55,11 +56,11 @@ def upsert_event(summary: str, start: datetime, end: datetime, description: str,
     event = {
         'summary': summary,
         'start': {
-            'dateTime': start.strftime('%Y-%m-%dT%H:%M:%S'),
+            'dateTime': start.strftime('%Y-%m-%dT%H:%M:%S%z'),
             'timeZone': 'America/New_York',
         },
         'end': {
-            'dateTime': end.strftime('%Y-%m-%dT%H:%M:%S'),
+            'dateTime': end.strftime('%Y-%m-%dT%H:%M:%S%z'),
             'timeZone': 'America/New_York',
         },
         'reminders': {

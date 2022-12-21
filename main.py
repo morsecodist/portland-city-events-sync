@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from tempfile import NamedTemporaryFile
 from time import sleep
 
@@ -59,6 +59,7 @@ with webdriver.Firefox(options=firefox_options) as browser:
         return current_url
 
     browser.get(HOME_URL)
+    ny_timezone = timezone(timedelta(hours=-5))
     sleep(3)
     table = browser.find_element(value="aspxroundpanelCurrent_pnlDetails_grdEventsCurrent")
     rows = table.find_elements(by=By.CLASS_NAME, value="dxgvDataRow_CustomThemeModerno")
@@ -72,6 +73,7 @@ with webdriver.Firefox(options=firefox_options) as browser:
         cells = row.find_elements(by=By.TAG_NAME, value="td")
         title = cells[1].text.strip()
         start_time = datetime.strptime(cells[2].text, "%m/%d/%Y %I:%M %p")
+        start_time = start_time.astimezone(ny_timezone)
         logger.info(f"processing: '{title}' {start_time}")
         download_cell = cells[4]
         downloads = download_cell.find_elements(by=By.CLASS_NAME, value="dxeButton")
