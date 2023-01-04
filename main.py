@@ -95,7 +95,8 @@ with webdriver.Firefox(options=firefox_options) as browser:
             raw_text = "\n".join(text_pages)
 
             zoom_link_regex = r"https?://[a-z0-9.-]*\.zoom\.us/\S+"
-            zoom_link = re.search(zoom_link_regex, raw_text).group()
+            zoom_link_result = re.search(zoom_link_regex, raw_text)
+            zoom_link = zoom_link_result and zoom_link_result.group()
 
             summary = "\n".join(summarize_text([raw_text]))
             description = f"Agenda Link: {agenda_link}\n\n"
