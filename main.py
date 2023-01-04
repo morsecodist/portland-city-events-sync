@@ -101,8 +101,8 @@ with webdriver.Firefox(options=firefox_options) as browser:
             summary = "\n".join(summarize_text([raw_text]))
             description = f"Agenda Link: {agenda_link}\n\n"
             if zoom_link:
-                description += "Meeting Link: {zoom_link}\n\n"
-            description += "Agenda Abridged:\n{summary}"
+                description += f"Meeting Link: {zoom_link}\n\n"
+            description += f"Agenda Abridged:\n{summary}"
             browser.close()
             browser.switch_to.window(browser.window_handles[0])
         if not existing_meeting or not existing_meeting.get('description') or (existing_meeting['description'] == DEFAULT_DESCRIPTION and description != DEFAULT_DESCRIPTION):
