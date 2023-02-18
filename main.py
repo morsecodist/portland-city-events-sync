@@ -84,27 +84,29 @@ with webdriver.Firefox(options=firefox_options) as browser:
         existing_meeting = meetings.get((title, start_time.isoformat()))
         if downloads and (not existing_meeting or existing_meeting['description'] == 'No agenda yet'):
             downloads[0].click()
-            [elem for elem in download_cell.find_elements(by=By.TAG_NAME, value="tr") if elem.text == "Agenda"][0].click()
-            browser.switch_to.window(browser.window_handles[-1])
-            current_url = wait_for_url()
-            with NamedTemporaryFile('wb', suffix=".pdf") as f:
-                f.write(requests.get(current_url).content)
-                pages = pdfplumber.open(f.name).pages
+            agenda = [elem for elem in download_cell.find_elements(by=By.TAG_NAME, value="tr") if elem.text == "Agenda"]
+            if agenda:
+                agenda[0].click()
+                browser.switch_to.window(browser.window_handles[-1])
+                current_url = wait_for_url()
+                with NamedTemporaryFile('wb', suffix=".pdf") as f:
+                    f.write(requests.get(current_url).content)
+                    pages = pdfplumber.open(f.name).pages
 
-            text_pages = [page.extract_text() for page in pages]
-            raw_text = "\n".join(text_pages)
+                text_pages = [page.extract_text() for page in pages]
+                raw_text = "\n".join(text_pages)
 
-            zoom_link_regex = r"https?://[a-z0-9.-]*\.zoom\.us/\S+"
-            zoom_link_result = re.search(zoom_link_regex, raw_text)
-            zoom_link = zoom_link_result and zoom_link_result.group()
+                zoom_link_regex = r"https?://[a-z0-9.-]*\.zoom\.us/\S+"
+                zoom_link_result = re.search(zoom_link_regex, raw_text)
+                zoom_link = zoom_link_result and zoom_link_result.group()
 
-            summary = "\n".join(summarize_text([raw_text]))
-            description = f"Agenda Link: {agenda_link}\n\n"
-            if zoom_link:
-                description += f"Meeting Link: {zoom_link}\n\n"
-            description += f"Agenda Abridged:\n{summary}"
-            browser.close()
-            browser.switch_to.window(browser.window_handles[0])
+                summary = "\n".join(summarize_text([raw_text]))
+                description = f"Agenda Link: {agenda_link}\n\n"
+                if zoom_link:
+                    description += f"Meeting Link: {zoom_link}\n\n"
+                description += f"Agenda Abridged:\n{summary}"
+                browser.close()
+                browser.switch_to.window(browser.window_handles[0])
         if not existing_meeting or not existing_meeting.get('description') or (existing_meeting['description'] == DEFAULT_DESCRIPTION and description != DEFAULT_DESCRIPTION):
             upsert_event(title, start_time, start_time + timedelta(hours=2), description, existing_meeting)
             logging.info(f"updating: '{title}' {start_time}")
