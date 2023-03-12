@@ -10,6 +10,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+import pytz
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar.events.owned']
@@ -34,8 +35,8 @@ def get_token(credentials_filename: str):
 
 
 def next_n_events(n=100):
-    ny_timezone = timezone(timedelta(hours=-5))
-    now = (datetime.now(ny_timezone) - timedelta(days=1)).isoformat()
+    tz = pytz.timezone('America/New_York')
+    now = (datetime.now(tz) - timedelta(days=1)).isoformat()
     events_result = service.events().list(
         calendarId=CALENDAR_ID,
         timeMin=now,

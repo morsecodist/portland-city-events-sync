@@ -49,7 +49,7 @@ def summarize_text(pages):
         yield response_text
 
 
-meetings = {(event['summary'], event['start']['dateTime']): event for event in next_n_events()}
+meetings = {(event['summary'], datetime.strptime(event['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').timestamp()): event for event in next_n_events()}
 
 
 with webdriver.Firefox(options=firefox_options) as browser:
@@ -60,8 +60,6 @@ with webdriver.Firefox(options=firefox_options) as browser:
         return current_url
 
     browser.get(HOME_URL)
-    ny_timezone = timezone(timedelta(hours=-5))
-    eastern_timezone = pytz.timezone("America/New_York")
     sleep(3)
     table = browser.find_element(value="aspxroundpanelCurrent_pnlDetails_grdEventsCurrent")
     rows = table.find_elements(by=By.CLASS_NAME, value="dxgvDataRow_CustomThemeModerno")
@@ -75,7 +73,8 @@ with webdriver.Firefox(options=firefox_options) as browser:
         cells = row.find_elements(by=By.TAG_NAME, value="td")
         title = cells[1].text.strip()
         start_time = datetime.strptime(cells[2].text, "%m/%d/%Y %I:%M %p")
-        start_time = start_time.replace(tzinfo=ny_timezone)
+        tz = pytz.timezone("America/New_York")
+        start_time = start_time.replace(tzinfo=tz)
         logger.info(f"processing: '{title}' {start_time}")
         download_cell = cells[4]
         downloads = download_cell.find_elements(by=By.CLASS_NAME, value="dxeButton")
