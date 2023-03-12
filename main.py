@@ -49,7 +49,7 @@ def summarize_text(pages):
         yield response_text
 
 
-meetings = {(event['summary'], datetime.strptime(event['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').timestamp()): event for event in next_n_events()}
+meetings = {(event['summary'], event['start']['dateTime']): event for event in next_n_events()}
 
 
 with webdriver.Firefox(options=firefox_options) as browser:
@@ -73,7 +73,7 @@ with webdriver.Firefox(options=firefox_options) as browser:
         cells = row.find_elements(by=By.TAG_NAME, value="td")
         title = cells[1].text.strip()
         start_time = datetime.strptime(cells[2].text, "%m/%d/%Y %I:%M %p")
-        tz = pytz.timezone("America/New_York")
+        tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.utcnow()))
         start_time = start_time.replace(tzinfo=tz)
         logger.info(f"processing: '{title}' {start_time}")
         download_cell = cells[4]
