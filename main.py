@@ -37,7 +37,7 @@ def summarize_text(pages):
         prompt = f"To summarize the following page:\n{text}\n\nUsing this format:\n{outline_format}\n"
         response = openai.Completion.create(
             engine="text-davinci-003",
-            prompt=prompt,
+            prompt=prompt[:(4097-400)],
             # prompt="Please summarize, as a bulleted list, the agendas of the following meetings, excluding any items that are present in every meeting (e.g. 'review of previous meeting minutes').\n" + text,
             temperature=0.7,
             max_tokens=400,
