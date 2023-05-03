@@ -9,7 +9,6 @@ from typing import List, NamedTuple
 
 import aiohttp
 import markdown
-import openai
 import pdfplumber
 from google_calendar import upsert_event, next_n_events
 
