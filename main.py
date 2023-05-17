@@ -87,35 +87,30 @@ def get_agenda_file_id(event: dict):
     return int(agendas[0]['fileId'])
 
 
-async def get_agenda_summary(agenda_pages: List[str]):
+async def get_agenda_summary(agenda_text: str):
     url = "https://api.openai.com/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {OPEN_AI_SECRET}"
     }
-    summary = ""
-    for i, page_text in enumerate(agenda_pages):
-        if i == 0:
-            prompt = f"Generate a simple to understand bullet-point summary in Markdown format for the following city meeting agenda, focusing on the main agenda items and ignoring boilerplate information such as the date, how to submit public comments, remote information. The summary should be preserve the categories of the items and resemble the following format:\n\n {demo}\n\n Here is the agenda to summarize:\n\n{page_text}\n\nSummary:\n"
-        else:
-            prompt = f"Add information from the next page to this a simple to understand bullet-point summary in Markdown format for the following city meeting agenda, focusing on the main agenda items and ignoring boilerplate information such as the date, how to submit public comments, remote information. The summary should be preserve the categories of the items and resemble the following format:\n\n {demo}\n\n Here is the summary so far:\n\n{summary}\n\nHere is the next page of the agenda to summarize:\n\n{page_text}\n\nSummary:\n"
+    # TODO: handle pagination
+    prompt = f"Generate a simple to understand bullet-point summary in Markdown format for the following city meeting agenda, focusing on the main agenda items and ignoring boilerplate information such as the date, how to submit public comments, remote information. The summary should be preserve the categories of the items and resemble the following format:\n\n {demo}\n\n Here is the agenda to summarize:\n\n{agenda_text}"
+    data = {
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": prompt[:4095] }],
+        "temperature": 0.7,
+    }
 
-        data = {
-            "model": "gpt-3.5-turbo",
-            "messages": [{"role": "user", "content": prompt }],
-            "temperature": 0.7,
-        }
-
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.post(url, json=data) as response:
-                if response.status == 200:
-                    response_json = await response.json()
-                    summary = response_json['choices'][0]['message']['content'].strip()
-                else:
-                    print(f"Error: {response.status}")
-                    print(await response.text())
-                    return None
-        return summary
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.post(url, json=data) as response:
+            if response.status == 200:
+                response_json = await response.json()
+                summary = response_json['choices'][0]['message']['content'].strip()
+            else:
+                print(f"Error: {response.status}")
+                print(await response.text())
+                return None
+    return summary
 
 
 async def build_event(event: dict) -> Event:
@@ -139,7 +134,7 @@ async def build_event(event: dict) -> Event:
         zoom_link_regex = r"https?://[a-z0-9.-]*\.zoom\.us/\S+/\d+"
         zoom_link_result = re.search(zoom_link_regex, agenda_text)
         zoom_link = zoom_link_result and zoom_link_result.group()
-        summary = await get_agenda_summary(agenda_pages)
+        summary = await get_agenda_summary(agenda_text)
         description = f"## [View Full Agenda]({agenda_link})\n"
         if zoom_link:
             description += f"## [Join Meeting]({zoom_link})\n"
