@@ -11,12 +11,21 @@ import aiohttp
 import markdown
 import pdfplumber
 from google_calendar import upsert_event, next_n_events
+from transformers import GPT2Tokenizer
 
 
 OPEN_AI_SECRET = os.environ['OPEN_API_SECRET']
 CITY_API_BASE_URL = os.environ['CITY_API_BASE_URL']
 
 DEFAULT_DESCRIPTION = "No agenda yet"
+
+tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+
+
+def truncate_text(text):
+    tokens = tokenizer.encode(text, truncation=True, max_length=4095)
+    return tokenizer.decode(tokens)
+
 
 class Event(NamedTuple):
     raw_data: dict
@@ -97,7 +106,7 @@ async def get_agenda_summary(agenda_text: str):
     prompt = f"Generate a simple to understand bullet-point summary in Markdown format for the following city meeting agenda, focusing on the main agenda items and ignoring boilerplate information such as the date, how to submit public comments, remote information. The summary should be preserve the categories of the items and resemble the following format:\n\n {demo}\n\n Here is the agenda to summarize:\n\n{agenda_text}"
     data = {
         "model": "gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": prompt[:4095] }],
+        "messages": [{"role": "user", "content": truncate_text(prompt) }],
         "temperature": 0.7,
     }
 
