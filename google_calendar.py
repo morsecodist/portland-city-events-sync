@@ -48,7 +48,7 @@ def next_n_events(n=100):
     return events_result.get('items', [])
 
 
-def upsert_event(summary: str, start: datetime, end: datetime, description: str, existing_event: Dict[str, any] | None):
+def upsert_event(calendar_id: str, summary: str, start: datetime, end: datetime, description: str, existing_event: Dict[str, any] | None):
     if existing_event:
         existing_event['description'] = description
         service.events().update(calendarId=CALENDAR_ID, eventId=existing_event['id'], body=existing_event).execute()
@@ -70,6 +70,11 @@ def upsert_event(summary: str, start: datetime, end: datetime, description: str,
                 {'method': 'popup', 'minutes': 30},
             ],
         },
+        'extendedProperties': {
+            'private': {
+                'portlandCalendarId': calendar_id,
+            },
+        }
     }
 
     if description:

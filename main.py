@@ -21,13 +21,17 @@ DEFAULT_DESCRIPTION = "No agenda yet"
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 
+MODEL = "gpt-3.5-turbo-16k"
+TOKENS = 16_385
+
 
 def truncate_text(text):
-    tokens = tokenizer.encode(text, truncation=True, max_length=4095)
+    tokens = tokenizer.encode(text, truncation=True, max_length=(TOKENS * 4) // 5)
     return tokenizer.decode(tokens)
 
 
 class Event(NamedTuple):
+    id: str
     raw_data: dict
     name: str
     start_time: datetime
@@ -58,7 +62,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-meetings = {(event['summary'], event['start']['dateTime']): event for event in next_n_events()}
+def extended_properties_private(event: dict, key: str):
+    return event.get('extendedProperties', {}).get('private', {}).get(key)
+
+meetings = {extended_properties_private(event, 'portlandCalendarId'): event for event in next_n_events() if extended_properties_private(event, 'portlandCalendarId')}
 
 async def get_events_from_date(date: datetime):
     date_str = date.strftime("%Y-%m-%d")
@@ -102,10 +109,9 @@ async def get_agenda_summary(agenda_text: str):
         "Content-Type": "application/json",
         "Authorization": f"Bearer {OPEN_AI_SECRET}"
     }
-    # TODO: handle pagination
     prompt = f"Generate a simple to understand bullet-point summary in Markdown format for the following city meeting agenda, focusing on the main agenda items and ignoring boilerplate information such as the date, how to submit public comments, remote information. The summary should be preserve the categories of the items and resemble the following format:\n\n {demo}\n\n Here is the agenda to summarize:\n\n{agenda_text}"
     data = {
-        "model": "gpt-3.5-turbo",
+        "model": "gpt-3.5-turbo-16k",
         "messages": [{"role": "user", "content": truncate_text(prompt) }],
         "temperature": 0.7,
     }
@@ -123,6 +129,7 @@ async def get_agenda_summary(agenda_text: str):
 
 
 async def build_event(event: dict) -> Event:
+    _id = event['id']
     name = event['eventName']
     start_time = datetime.strptime(event['startDateTime'], '%Y-%m-%dT%H:%M:%SZ')
     tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.utcnow()))
@@ -152,7 +159,7 @@ async def build_event(event: dict) -> Event:
         description += summary
         description = markdown.markdown(description)
 
-    return Event(event, name, start_time, end_time, agenda_link, zoom_link, summary, description)
+    return Event(_id, event, name, start_time, end_time, agenda_link, zoom_link, summary, description)
 
 
 async def main():
@@ -162,7 +169,7 @@ async def main():
     for event in events:
         existing_meeting = meetings.get((event.name, event.start_time.isoformat()))
         if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
-            upsert_event(event.name, event.start_time, event.end_time, event.description, existing_meeting)
+            upsert_event(event.id, event.name, event.start_time, event.end_time, event.description, existing_meeting)
             logging.info(f"updating: '{event.name}' {event.start_time}")
         else:
             logging.info(f"skipping: '{event.name}' {event.start_time}")
