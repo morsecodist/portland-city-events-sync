@@ -129,7 +129,7 @@ async def get_agenda_summary(agenda_text: str):
 
 
 async def build_event(event: dict) -> Event:
-    _id = event['id']
+    _id = str(event['id'])
     name = event['eventName']
     start_time = datetime.strptime(event['startDateTime'], '%Y-%m-%dT%H:%M:%SZ')
     tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.utcnow()))
@@ -167,7 +167,7 @@ async def main():
     events: List[Event] = await asyncio.gather(*[build_event(event) for event in raw_events])
 
     for event in events:
-        existing_meeting = meetings.get((event.name, event.start_time.isoformat()))
+        existing_meeting = meetings.get(event.id)
         if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
             upsert_event(event.id, event.name, event.start_time, event.end_time, event.description, existing_meeting)
             logging.info(f"updating: '{event.name}' {event.start_time}")
