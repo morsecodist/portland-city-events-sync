@@ -49,11 +49,6 @@ def next_n_events(n=100):
 
 
 def upsert_event(calendar_id: str, summary: str, start: datetime, end: datetime, description: str, existing_event: Dict[str, any] | None):
-    if existing_event:
-        existing_event['description'] = description
-        service.events().update(calendarId=CALENDAR_ID, eventId=existing_event['id'], body=existing_event).execute()
-        return
-
     event = {
         'summary': summary,
         'start': {
@@ -80,4 +75,10 @@ def upsert_event(calendar_id: str, summary: str, start: datetime, end: datetime,
     if description:
         event['description'] = description
 
-    service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
+    if existing_event:
+        return service.events().update(calendarId=CALENDAR_ID, eventId=existing_event['id'], body=event).execute()
+
+    return service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
+
+def delete_event(existing_event: Dict[str, any]):
+    service.events().delete(calendarId=CALENDAR_ID, eventId=existing_event['id']).execute()

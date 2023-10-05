@@ -10,7 +10,7 @@ from typing import List, NamedTuple
 import aiohttp
 import markdown
 import pdfplumber
-from google_calendar import upsert_event, next_n_events
+from google_calendar import delete_event, upsert_event, next_n_events
 from transformers import GPT2Tokenizer
 
 
@@ -168,11 +168,21 @@ async def main():
 
     for event in events:
         existing_meeting = meetings.get(event.id)
+        if existing_meeting and 'CANCELLED' in event.name:
+            logger.info(f"Deleting: '{event.name}' {event.start_time}")
+            delete_event(existing_meeting)
+            continue
+
+        if 'CANCELLED' in event.name:
+            logger.info(f"Skipping: '{event.name}' {event.start_time}")
+            continue
+
         if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
-            upsert_event(event.id, event.name, event.start_time, event.end_time, event.description, existing_meeting)
+            upsert_event(event.id, f"City of Portland: {event.name}", event.start_time, event.end_time, event.description, existing_meeting)
             logging.info(f"updating: '{event.name}' {event.start_time}")
-        else:
-            logging.info(f"skipping: '{event.name}' {event.start_time}")
+            continue
+
+        logging.info(f"skipping: '{event.name}' {event.start_time}")
 
 
 if __name__ == "__main__":
