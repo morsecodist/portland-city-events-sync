@@ -21,8 +21,8 @@ DEFAULT_DESCRIPTION = "No agenda yet"
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 
-MODEL = "gpt-3.5-turbo-16k"
-TOKENS = 16_385
+MODEL = "gpt-4-32k"
+TOKENS = 32_768
 
 
 def truncate_text(text):
