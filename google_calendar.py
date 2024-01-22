@@ -3,8 +3,8 @@ import datetime
 import os.path
 from base64 import b64decode, b64encode
 from tempfile import NamedTemporaryFile
-from datetime import datetime, timedelta, timezone
-from typing import Dict
+from datetime import datetime, timedelta
+from typing import Any, Dict
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -26,6 +26,8 @@ if token := os.getenv('TOKEN'):
         creds.refresh(Request())
     # https://developers.google.com/calendar/api/quickstart/python
     service = build('calendar', 'v3', credentials=creds)
+else:
+    raise Exception()
 
 
 def get_token(credentials_filename: str):
@@ -48,7 +50,7 @@ def next_n_events(n=100):
     return events_result.get('items', [])
 
 
-def upsert_event(calendar_id: str, summary: str, start: datetime, end: datetime, description: str, existing_event: Dict[str, any] | None):
+def upsert_event(calendar_id: str, summary: str, start: datetime, end: datetime, description: str, existing_event: Dict[str, Any] | None):
     event = {
         'summary': summary,
         'start': {
@@ -80,5 +82,5 @@ def upsert_event(calendar_id: str, summary: str, start: datetime, end: datetime,
 
     return service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
 
-def delete_event(existing_event: Dict[str, any]):
+def delete_event(existing_event: Dict[str, Any]):
     service.events().delete(calendarId=CALENDAR_ID, eventId=existing_event['id']).execute()

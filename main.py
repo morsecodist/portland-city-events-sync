@@ -38,8 +38,7 @@ class Event(NamedTuple):
     end_time: datetime
     agenda_link: str | None
     zoom_link: str | None
-    summary: str | None
-    description: str | None
+    description: str
 
 demo = """
 # Name of Meeting in Title Case Followed by Agenda
@@ -87,7 +86,7 @@ async def download_and_parse_pdf(url: str):
                 return extract_text_from_pdf(io.BytesIO(await response.read()))
             else:
                 print(f"Error: {response.status}")
-                return None
+                return []
 
 
 def extract_text_from_pdf(data: io.BytesIO):
@@ -139,9 +138,7 @@ async def build_event(event: dict) -> Event:
     existing_meeting = meetings.get((name, start_time.isoformat()))
 
     agenda_file_id = get_agenda_file_id(event)
-    agenda_link = None
-    zoom_link = None
-    summary = None
+    agenda_link = zoom_link =  None
     description = DEFAULT_DESCRIPTION
     if agenda_file_id and (not existing_meeting or DEFAULT_DESCRIPTION in existing_meeting['description']):
         agenda_link = get_file_download_link(agenda_file_id)
@@ -156,10 +153,10 @@ async def build_event(event: dict) -> Event:
             description += f"## [Join Meeting]({zoom_link})\n"
         else:
             description += "## Link to Join Unavailable\n"
-        description += summary
+        description += summary or ""
         description = markdown.markdown(description)
 
-    return Event(_id, event, name, start_time, end_time, agenda_link, zoom_link, summary, description)
+    return Event(_id, event, name, start_time, end_time, agenda_link, zoom_link, description)
 
 
 async def main():
