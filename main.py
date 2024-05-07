@@ -137,6 +137,7 @@ async def build_event(event: dict) -> Event:
     logger.info(f"processing: '{name}' {start_time} - {end_time}")
     existing_meeting = meetings.get((name, start_time.isoformat()))
 
+    agenda_center_link = f"https://portlandme.portal.civicclerk.com/event/{_id}/overview"
     agenda_file_id = get_agenda_file_id(event)
     agenda_link = zoom_link = maybe_agenda_pages = None
     description = DEFAULT_DESCRIPTION
@@ -151,7 +152,8 @@ async def build_event(event: dict) -> Event:
         zoom_link_result = re.search(zoom_link_regex, agenda_text)
         zoom_link = zoom_link_result and zoom_link_result.group()
         summary = await get_agenda_summary(agenda_text)
-        description = f"## [View Full Agenda]({agenda_link})\n"
+        description = f"## [Agenda Center]({agenda_center_link})\n"
+        description += f"## [View Full Agenda]({agenda_link})\n"
         if zoom_link:
             description += f"## [Join Meeting]({zoom_link})\n"
         else:
@@ -177,10 +179,10 @@ async def main():
             logger.info(f"Skipping: '{event.name}' {event.start_time}")
             continue
 
-        # if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
-        upsert_event(event.id, f"City of Portland: {event.name}", event.start_time, event.end_time, event.description, existing_meeting)
-        logging.info(f"updating: '{event.name}' {event.start_time}")
-        #    continue
+        if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
+            upsert_event(event.id, f"City of Portland: {event.name}", event.start_time, event.end_time, event.description, existing_meeting)
+            logging.info(f"updating: '{event.name}' {event.start_time}")
+            continue
 
         logging.info(f"skipping: '{event.name}' {event.start_time}")
 
