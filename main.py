@@ -5,7 +5,7 @@ import os
 import pytz
 import re
 from datetime import datetime, timedelta, timezone
-from typing import List, NamedTuple
+from typing import Iterable, List, NamedTuple
 
 import aiohttp
 import markdown
@@ -76,20 +76,20 @@ async def get_events_from_date(date: datetime):
 
 
 def get_file_download_link(file_id: int) -> str:
-    return f"{CITY_API_BASE_URL}/Meetings/GetMeetingFileStream(fileId={file_id},%20plainText=false)"
+    return f"{CITY_API_BASE_URL}/Meetings/GetMeetingFileStream(fileId={file_id},plainText=false)"
 
 
-async def download_and_parse_pdf(url: str):
+async def download_and_parse_pdf(url: str) -> Iterable[str] | None:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:
                 return extract_text_from_pdf(io.BytesIO(await response.read()))
             else:
-                print(f"Error: {response.status}")
-                return []
+                print(f"ERROR: failed to download PDF: {url} {response.status}")
+                return None
 
 
-def extract_text_from_pdf(data: io.BytesIO):
+def extract_text_from_pdf(data: io.BytesIO) -> Iterable[str]:
     with pdfplumber.open(data) as pdf:
         for page in pdf.pages:
             yield page.extract_text()
@@ -138,10 +138,13 @@ async def build_event(event: dict) -> Event:
     existing_meeting = meetings.get((name, start_time.isoformat()))
 
     agenda_file_id = get_agenda_file_id(event)
-    agenda_link = zoom_link =  None
+    agenda_link = zoom_link = maybe_agenda_pages = None
     description = DEFAULT_DESCRIPTION
     if agenda_file_id and (not existing_meeting or DEFAULT_DESCRIPTION in existing_meeting['description']):
         agenda_link = get_file_download_link(agenda_file_id)
+        maybe_agenda_pages = await download_and_parse_pdf(agenda_link)
+
+    if maybe_agenda_pages:
         agenda_pages = list(await download_and_parse_pdf(agenda_link))
         agenda_text = "\n".join(agenda_pages)
         zoom_link_regex = r"https?://[a-z0-9.-]*\.zoom\.us/\S+/\d+"
@@ -174,10 +177,10 @@ async def main():
             logger.info(f"Skipping: '{event.name}' {event.start_time}")
             continue
 
-        if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
-            upsert_event(event.id, f"City of Portland: {event.name}", event.start_time, event.end_time, event.description, existing_meeting)
-            logging.info(f"updating: '{event.name}' {event.start_time}")
-            continue
+        # if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
+        upsert_event(event.id, f"City of Portland: {event.name}", event.start_time, event.end_time, event.description, existing_meeting)
+        logging.info(f"updating: '{event.name}' {event.start_time}")
+        #    continue
 
         logging.info(f"skipping: '{event.name}' {event.start_time}")
 
