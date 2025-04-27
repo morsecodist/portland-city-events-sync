@@ -16,6 +16,7 @@ from transformers import GPT2Tokenizer
 
 OPEN_AI_SECRET = os.environ['OPEN_API_SECRET']
 CITY_API_BASE_URL = os.environ['CITY_API_BASE_URL']
+FORCE_UPDATE = os.environ.get('FORCE_UPDATE', 'false').lower() == 'true'
 
 DEFAULT_DESCRIPTION = "No agenda yet"
 
@@ -131,7 +132,7 @@ async def build_event(event: dict) -> Event:
     _id = str(event['id'])
     name = event['eventName']
     start_time = datetime.strptime(event['startDateTime'], '%Y-%m-%dT%H:%M:%SZ')
-    tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.utcnow()))
+    tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.now(timezone.utc)))
     start_time = start_time.replace(tzinfo=tz)
     end_time = start_time + timedelta(hours=2)
     logger.info(f"processing: '{name}' {start_time} - {end_time}")
@@ -146,7 +147,7 @@ async def build_event(event: dict) -> Event:
         maybe_agenda_pages = await download_and_parse_pdf(agenda_link)
 
     if maybe_agenda_pages:
-        agenda_pages = list(await download_and_parse_pdf(agenda_link))
+        agenda_pages = list(maybe_agenda_pages)
         agenda_text = "\n".join(agenda_pages)
         zoom_link_regex = r"https?://[a-z0-9.-]*\.zoom\.us/\S+/\d+"
         zoom_link_result = re.search(zoom_link_regex, agenda_text)
@@ -179,7 +180,10 @@ async def main():
             logger.info(f"Skipping: '{event.name}' {event.start_time}")
             continue
 
-        if not existing_meeting or not existing_meeting.get('description') or (DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION):
+        no_description = not existing_meeting or not existing_meeting.get('description')
+        new_description = existing_meeting and DEFAULT_DESCRIPTION in existing_meeting['description'] and event.description != DEFAULT_DESCRIPTION
+
+        if FORCE_UPDATE or no_description or new_description:
             upsert_event(event.id, f"City of Portland: {event.name}", event.start_time, event.end_time, event.description, existing_meeting)
             logging.info(f"updating: '{event.name}' {event.start_time}")
             continue

@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '0 12 * * *'
   workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update events even if they already have descriptions'
+        required: false
+        default: 'false'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,3 +28,4 @@ jobs:
         CITY_API_BASE_URL: ${{ secrets.CITY_API_BASE_URL }}
         TOKEN: ${{ secrets.TOKEN }}
         OPEN_API_SECRET: ${{ secrets.OPEN_API_SECRET }}
+        FORCE_UPDATE_EXISTING: ${{ github.event.inputs.force_update }}
