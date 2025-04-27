@@ -132,7 +132,8 @@ async def build_event(event: dict) -> Event:
     _id = str(event['id'])
     name = event['eventName']
     start_time = datetime.strptime(event['startDateTime'], '%Y-%m-%dT%H:%M:%SZ')
-    tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.now(timezone.utc)))
+    # TODO: make this less bad
+    tz = timezone(pytz.timezone("America/New_York").utcoffset(datetime.utcnow()))
     start_time = start_time.replace(tzinfo=tz)
     end_time = start_time + timedelta(hours=2)
     logger.info(f"processing: '{name}' {start_time} - {end_time}")
